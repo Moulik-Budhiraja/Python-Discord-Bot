@@ -1,8 +1,58 @@
-import json
 import mysql.connector
 
 import os
 from dotenv import load_dotenv
+
+from exceptions import EntryNotFound, EntryAlreadyExists
+
+
+class Cog:
+    def __init__(self, id, db, cursor):
+        self.id = id
+        self._db = db
+        self._cursor = cursor
+
+    @property
+    def name(self):
+        """Returns the name of the cog
+
+        Returns:
+            str: [name]
+        """
+
+        self._cursor.execute("SELECT name FROM cogs WHERE id = %s", (self.id,))
+
+        name = self._cursor.fetchone()[0]
+
+        return name
+
+    @property
+    def enabled(self) -> bool:
+        """Returns if the cog is enabled
+
+        Returns:
+            bool: [description]
+        """
+
+        self._cursor.execute(
+            "SELECT enabled FROM cogs WHERE id = %s", (self.id,))
+
+        enabled = self._cursor.fetchone()[0]
+
+        return enabled
+
+    @enabled.setter
+    def enabled(self, value: bool):
+        """Sets if the cog is enabled
+
+        Args:
+            value (bool): [description]
+        """
+
+        self._cursor.execute(
+            "UPDATE cogs SET enabled = %s WHERE id = %s", (value, self.id))
+
+        self._db.commit()
 
 
 class Game:
@@ -833,6 +883,19 @@ class Channel:
 
         return muted_events
 
+    @muted_events.setter
+    def muted_events(self, value: bool):
+        """Sets the muted events value of the channel
+
+        Args:
+            value (bool): [muted_events]
+        """
+
+        self._cursor.execute(
+            "UPDATE channels SET muted_events = %s WHERE id = %s", (value, self.id))
+
+        self._db.commit()
+
     @property
     def dynamic_voice_channel(self) -> bool:
         """Returns a bool for if the channel is a dynamic voice channel
@@ -901,7 +964,7 @@ class Guild:
         """
 
         self._cursor.execute(
-            "SELECT discord_id FROM guilds WHERE id = %s", (self.id,))[0]
+            "SELECT discord_id FROM guilds WHERE id = %s", (self.id,))
 
         discord_id = self._cursor.fetchone()[0]
 
@@ -1138,6 +1201,36 @@ class Guild:
 
         self._db.commit()
 
+    @property
+    def slash_commands(self) -> bool:
+        """Returns whether or not slash commands are enabled
+
+        Returns:
+            bool: [True if enabled, False otherwise]
+        """
+
+        self._cursor.execute(
+            "SELECT slash_commands FROM guilds WHERE id = %s",
+            (self.id,))
+
+        enabled = self._cursor.fetchone()[0]
+
+        return enabled
+
+    @slash_commands.setter
+    def slash_commands(self, enabled: bool):
+        """Sets whether or not slash commands are enabled
+
+        Args:
+            enabled (bool): [True if enabled, False otherwise]
+        """
+
+        self._cursor.execute(
+            "UPDATE guilds SET slash_commands = %s WHERE id = %s",
+            (enabled, self.id))
+
+        self._db.commit()
+
     def __hash__(self):
         return hash(self.id)
 
@@ -1161,7 +1254,10 @@ class Guild:
             "SELECT id FROM channels WHERE guild_id = %s AND discord_id = %s",
             (self.id, discord_id))
 
-        channel_id = self._cursor.fetchone()[0]
+        try:
+            channel_id = self._cursor.fetchone()[0]
+        except TypeError:
+            raise EntryNotFound("Channel is not a part of this guild")
 
         return Channel(channel_id, self._db, self._cursor)
 
@@ -1206,6 +1302,70 @@ class Data:
 
         self._cursor = self._db.cursor()
 
+    @property
+    def guild_discord_ids(self) -> list:
+        """Returns a list of guild ids
+
+        Returns:
+            list: [list of guild ids]
+        """
+
+        self._cursor.execute("SELECT discord_id FROM guilds")
+
+        discord_ids = self._cursor.fetchall()
+        discord_ids = [discord_id[0]
+                       for discord_id in discord_ids]  # Convert to ints
+
+        return discord_ids
+
+    @property
+    def guilds(self) -> list:
+        """Returns a set of guild objects
+
+        Returns:
+            List: [List of Guild objects]
+        """
+
+        self._cursor.execute(
+            "SELECT id FROM guilds")
+
+        guild_ids = self._cursor.fetchall()
+        guilds = [Guild(id[0], self._db, self._cursor) for id in guild_ids]
+
+        return guilds
+
+    @property
+    def enabled_slash(self) -> list:
+        """Returns a list of guild ids that have slash commands enabled
+
+        Returns:
+            list: [list of guild ids]
+        """
+
+        self._cursor.execute(
+            "SELECT discord_id FROM guilds WHERE slash_commands = 1")
+
+        discord_ids = self._cursor.fetchall()
+        discord_ids = [discord_id[0]
+                       for discord_id in discord_ids]  # Convert to ints
+
+        return discord_ids
+
+    @property
+    def cogs(self) -> list:
+        """Returns a list of cog objects
+
+        Returns:
+            list: [list of cog objects]
+        """
+
+        self._cursor.execute("SELECT id FROM cogs")
+
+        cog_ids = self._cursor.fetchall()
+        cogs = [Cog(id[0], self._db, self._cursor) for id in cog_ids]
+
+        return cogs
+
     def get_guild(self, discord_id: int) -> Guild:
         """Returns Guild object from database
 
@@ -1219,9 +1379,99 @@ class Data:
         self._cursor.execute(
             "SELECT id FROM guilds WHERE discord_id = %s", (discord_id,))
 
-        guild_id = self._cursor.fetchone()[0]
+        try:
+            guild_id = self._cursor.fetchone()[0]
+        except TypeError:
+            raise EntryNotFound("Guild does not exist in the database")
 
         return Guild(guild_id, self._db, self._cursor)
+
+    def add_guild(self, discord_id: int, name: str):
+        """Adds a guild to the database
+
+        Args:
+            discord_id (int): [Id discord associates with each guild]
+            name (str): [Name of the guild]
+        """
+        # Check if guild is already in the database
+        self._cursor.execute(
+            "SELECT * FROM guilds WHERE discord_id = %s", (discord_id,))
+
+        if len(self._cursor.fetchall()) != 0:
+            raise EntryAlreadyExists(
+                f"Guild with id {discord_id} already exists in the database")
+
+        # Insert new guild
+        self._cursor.execute(
+            "INSERT INTO guilds (discord_id, name) VALUES (%s, %s)",
+            (discord_id, name))
+        self._db.commit()
+
+        guild = Guild(self._cursor.lastrowid, self._db, self._cursor)
+
+        return guild
+
+    def get_user(self, discord_id: int) -> User:
+        """Returns User object from database
+
+        Args:
+            discord_id ([int]): [Id discord associates with each user]
+
+        Returns:
+            User: [User object]
+        """
+
+        self._cursor.execute(
+            "SELECT id FROM users WHERE discord_id = %s", (discord_id,))
+
+        try:
+            user_id = self._cursor.fetchone()[0]
+        except TypeError:
+            raise EntryNotFound("User does not exist in the database")
+
+        return User(user_id, self._db, self._cursor)
+
+    def add_user(self, discord_id: int, name: str, discriminator: str):
+        """Adds a user to the database
+
+        Args:
+            discord_id (int): [Id discord associates with each user]
+            name (str): [Name of the user]
+            discriminator (str): [Discriminator of the user]
+        """
+        # Check if user is already in the database
+        self._cursor.execute(
+            "SELECT * FROM users WHERE discord_id = %s", (discord_id,))
+
+        if len(self._cursor.fetchall()) != 0:
+            raise EntryAlreadyExists(
+                f"User with id {discord_id} already exists in the database")
+
+        # Insert new user
+        self._cursor.execute(
+            "INSERT INTO users (discord_id, name, discriminator) VALUES (%s, %s, %s)",
+            (discord_id, name, discriminator))
+        self._db.commit()
+
+        user = User(self._cursor.lastrowid, self._db, self._cursor)
+
+        return user
+
+    def get_cog(self, name: str) -> Cog:
+        """Returns Cog object from database
+
+        Args:
+            name (str): [Name of the cog]
+        """
+
+        self._cursor.execute("SELECT id FROM cogs WHERE name = %s", (name,))
+
+        try:  # Check if cog exists
+            cog_id = self._cursor.fetchone()[0]
+        except TypeError:
+            raise EntryNotFound("Cog does not exist in the database")
+
+        return Cog(cog_id, self._db, self._cursor)
 
 
 if __name__ == "__main__":
