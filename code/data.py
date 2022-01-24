@@ -1268,6 +1268,12 @@ class Guild:
             channel (Channel): [Channel object]
         """
 
+        self._cursor.execute(
+            "SELECT id FROM channels WHERE guild_id = %s AND discord_id = %s", (self.id, discord_id))
+
+        if len(self._cursor.fetchall()) != 0:
+            raise EntryAlreadyExists("Channel already exists in this guild")
+
         # Optional args
         dynamic_voice_channel = kwargs.get('dynamic_voice_channel', False)
 
@@ -1275,6 +1281,8 @@ class Guild:
             "INSERT INTO channels (guild_id, discord_id, name, dynamic_voice_channel) VALUES (%s, %s, %s, %s)",
             (self.id, discord_id, name, dynamic_voice_channel))
         self._db.commit()
+
+        return Channel(self._cursor.lastrowid, self._db, self._cursor)
 
     def remove_channel(self, discord_id):
         """Removes a channel from the guild

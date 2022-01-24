@@ -45,7 +45,8 @@ class Chat(commands.Cog):
         self,
         ctx,
         channel: Option(discord.TextChannel, "Channel to mute",
-                        required=False, default=None)
+                        required=False, default=None),
+        all: Option(bool, "Mute all channels", required=False, default=False)
     ):
         """
         Mute the channel
@@ -54,19 +55,140 @@ class Chat(commands.Cog):
         channel = ctx.channel if channel is None else channel
 
         # get the guild
-        guild = data.get_guild(ctx.guild.id)
+        guild_data = data.get_guild(ctx.guild.id)
+
+        if all:
+            channels_muted = []
+            for channel in ctx.guild.channels:
+                try:
+                    channel_data = guild_data.get_channel(channel.id)
+                except EntryNotFound:
+                    channel_data = guild_data.add_channel(
+                        channel.id, channel.name)  # add the channel to the database
+
+                if channel_data.muted_events == False:
+                    channel_data.muted_events = True
+                    # add channel to list of muted channels
+                    channels_muted.append(channel)
+
+            # Mention each channel
+            channels_muted = [c.mention for c in channels_muted]
+
+            # Joined string
+            channels_muted = '\n'.join(channels_muted)
+
+            # Send response
+            response = discord.Embed(
+                title="Channels Unmuted",
+                description=f"The following channels have been muted:\n{channels_muted}",
+                color=0x00ff00
+            )
+
+            return await ctx.respond(embed=response)
 
         # get the channel or add it if it doesn't exist
         try:
-            channel = guild.get_channel(channel.id)
+            channel_data = guild_data.get_channel(channel.id)
         except EntryNotFound:
-            channel = guild.add_channel(channel.id, channel.name)
+            channel_data = guild_data.add_channel(channel.id, channel.name)
+
+        # Check if the channel is already muted
+        if channel_data.muted_events:
+            response = discord.Embed(
+                title="Channel already muted",
+                description=f"{channel.mention} is already muted",
+                color=0xFFff00
+            )
+
+            return await ctx.respond(embed=response)
 
         # mute the channel
-        channel.muted_events = True
+        channel_data.muted_events = True
 
         # send a response
-        await ctx.respond(f"{channel.mention} is now muted")
+        response = discord.Embed(
+            title="Channel Muted",
+            description=f"{channel.mention} has been muted",
+            color=0x00ff00
+        )
+
+        return await ctx.respond(embed=response)
+
+    @slash_command(guild_ids=data.enabled_slash, name='unmute_channel', description='Allow jerald to talk in this channel')
+    async def unmute_channel(
+        self,
+        ctx,
+        channel: Option(discord.TextChannel, "Channel to unmute",
+                        required=False, default=None),
+        all: Option(bool, "Unmute all channels", required=False, default=False)
+    ):
+        """
+        Unmute the channel
+        """
+        # get the channel
+        channel = ctx.channel if channel is None else channel
+
+        # get the guild
+        guild_data = data.get_guild(ctx.guild.id)
+
+        if all:
+            # unmute all channels
+            channels_muted = []
+            for channel in ctx.guild.channels:
+                try:
+                    channel_data = guild_data.get_channel(channel.id)
+                except EntryNotFound:
+                    # add the channel if it doesn't exist
+                    channel_data = guild_data.add_channel(
+                        channel.id, channel.name)
+
+                if channel_data.muted_events:  # if the channel is muted
+                    channel_data.muted_events = False
+                    # add each channel unmuted to the list
+                    channels_muted.append(channel)
+
+            # Mention each channel
+            channels_muted = [c.mention for c in channels_muted]
+
+            # Joined string
+            channels_muted = '\n'.join(channels_muted)
+
+            # Send a response
+            response = discord.Embed(
+                title="Channels Unmuted",
+                description=f"The following channels have been unmuted:\n{channels_muted}",
+                color=0x00ff00
+            )
+
+            return await ctx.respond(embed=response)
+
+        # get the channel or add it if it doesn't exist
+        try:
+            channel_data = guild_data.get_channel(channel.id)
+        except EntryNotFound:
+            channel_data = guild_data.add_channel(channel.id, channel.name)
+
+        # Check if the channel is already unmuted
+        if channel_data.muted_events == False:
+            response = discord.Embed(
+                title="Channel Unmuted",
+                description=f"{channel.mention} is already unmuted",
+                color=0xffff00
+            )
+
+            return await ctx.respond(embed=response)
+
+        # unmute the channel
+        channel_data.muted_events = False
+
+        # send a response
+        response = discord.Embed(
+            title="Channel Unmuted",
+            description=f"{channel.mention} has been unmuted",
+            color=0x00ff00
+        )
+
+        return await ctx.respond(embed=response)
 
 
 def setup(client):
