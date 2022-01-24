@@ -30,9 +30,9 @@ class Chat(commands.Cog):
             await message.channel.send('hi')
 
         # if message has I'm followed by a sentence, say "Hi <sentence>, I'm Jerald"
-        if re.search(r"i'?m ([\s\w]+)\.?", message.content, re.IGNORECASE):
+        if re.search(r"\bi'?m ([\s\w]+)\.?", message.content, re.IGNORECASE):
             sentence = re.search(
-                r"i'?m ([\s\w]+)\.?", message.content, re.IGNORECASE).group(1)
+                r"\bi'?m ([\s\w]+)\.?", message.content, re.IGNORECASE).group(1)
             await message.channel.send(f"Hi {sentence}, I'm Jerald")
 
         # if the message is all caps
