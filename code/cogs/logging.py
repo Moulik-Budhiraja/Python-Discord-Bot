@@ -14,7 +14,8 @@ class Logging(commands.Cog):
     async def on_message(self, message):
         data.add_log("Message", ctx=message)
 
-    async def log_command(self, ctx, action=None, response=None, extra=None):
+    @staticmethod
+    async def log_command(ctx, action=None, response=None, extra=None):
         # Log command
         data.add_log(
             "Command",

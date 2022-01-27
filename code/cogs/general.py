@@ -4,6 +4,8 @@ from discord.ext.commands import MissingRequiredArgument, MissingPermissions
 from discord import Forbidden
 from discord.commands import slash_command, Option
 
+from .logging import Logging
+
 from data import Data
 data = Data()
 
@@ -17,7 +19,12 @@ class General(commands.Cog):
         """
         Returns the bot's latency
         """
-        return await ctx.respond(f'Pong! `{round(self.client.latency * 1000)}ms`')
+        response = await ctx.respond(f'Pong! `{round(self.client.latency * 1000)}ms`')
+
+        Logging.log_command(ctx, action='Command',
+                            extra="ping", response=response)
+
+        return
 
     @slash_command(guild_ids=data.enabled_slash, name='mute')
     @commands.has_permissions(moderate_members=True)
@@ -42,7 +49,12 @@ class General(commands.Cog):
                 color=0xff0000
             )
 
-            return await ctx.respond(embed=response)
+            response = await ctx.respond(embed=response)  # Send the response
+
+            Logging.log_command(ctx, action='Command',
+                                extra=f"Failed to mute {user.name}", response=response)
+
+            return
 
         # Timeout the user for the time specified
         await user.timeout_for(datetime.timedelta(minutes=time), reason=reason)
@@ -53,7 +65,12 @@ class General(commands.Cog):
             color=0x00ff00
         )
 
-        return await ctx.respond(embed=response)
+        response = await ctx.respond(embed=response)  # Send the response
+
+        Logging.log_command(ctx, action='Command',
+                            extra=f"Muted {user.name}", response=response)
+
+        return
 
     @mute.error
     async def mute_error(self, ctx, error):
@@ -67,7 +84,12 @@ class General(commands.Cog):
                 color=0xff0000
             )
 
-            return await ctx.respond(embed=response)
+            response = await ctx.respond(embed=response)  # Send the response
+
+            Logging.log_command(ctx, action='Command',
+                                extra="Failed to mute", response=response)
+
+            return
 
         # Check if the user is missing permissions
         if isinstance(error, MissingPermissions):
@@ -78,7 +100,12 @@ class General(commands.Cog):
                 color=0xff0000
             )
 
-            return await ctx.respond(embed=response)
+            response = await ctx.respond(embed=response)  # Send the response
+
+            Logging.log_command(ctx, action='Command',
+                                extra="Failed to mute", response=response)
+
+            return
 
         if isinstance(error, Forbidden):  # Check if the bot has missing permissions
             response = discord.Embed(
@@ -87,7 +114,12 @@ class General(commands.Cog):
                 color=0xff0000
             )
 
-            return await ctx.respond(embed=response)
+            response = await ctx.respond(embed=response)
+
+            Logging.log_command(ctx, action='Command',
+                                extra="Failed to mute", response=response)
+
+            return
 
         raise error
 
@@ -136,7 +168,12 @@ class General(commands.Cog):
                 color=0xff0000
             )
 
-            return await ctx.respond(embed=response)
+            response = await ctx.respond(embed=response)
+
+            Logging.log_command(ctx, action='Command',
+                                extra="Failed to unmute", response=response)
+
+            return
 
         # Check if the user is missing permissions
         if isinstance(error, MissingPermissions):
@@ -147,7 +184,12 @@ class General(commands.Cog):
                 color=0xff0000
             )
 
-            return await ctx.respond(embed=response)
+            response = await ctx.respond(embed=response)
+
+            Logging.log_command(ctx, action='Command',
+                                extra="Failed to unmute", response=response)
+
+            return
 
         if isinstance(error, Forbidden):  # Check if the bot has missing permissions
             response = discord.Embed(
@@ -156,7 +198,12 @@ class General(commands.Cog):
                 color=0xff0000
             )
 
-            return await ctx.respond(embed=response)
+            response = await ctx.respond(embed=response)
+
+            Logging.log_command(ctx, action='Command',
+                                extra="Failed to unmute", response=response)
+
+            return
 
         raise error
 
@@ -240,7 +287,12 @@ class General(commands.Cog):
             color=0x00ff00
         )
 
-        return await ctx.respond(embed=response)
+        response = await ctx.respond(embed=response)
+
+        Logging.log_command(ctx, action='Command',
+                            extra=f"Banned {user.name}", response=response)
+
+        return
 
     @ban.error
     async def ban_error(self, ctx, error):
@@ -253,7 +305,12 @@ class General(commands.Cog):
                 color=0xff0000
             )
 
-            return await ctx.respond(embed=response)
+            response = await ctx.respond(embed=response)
+
+            Logging.log_command(ctx, action='Command',
+                                extra="Failed to ban", response=response)
+
+            return
 
         if isinstance(error, MissingPermissions):
             response = discord.Embed(
@@ -263,7 +320,12 @@ class General(commands.Cog):
                 color=0xff0000
             )
 
-            return await ctx.respond(embed=response)
+            response = await ctx.respond(embed=response)
+
+            Logging.log_command(ctx, action='Command',
+                                extra="Failed to ban", response=response)
+
+            return
 
         if isinstance(error, Forbidden):
             response = discord.Embed(
@@ -272,7 +334,12 @@ class General(commands.Cog):
                 color=0xff0000
             )
 
-            return await ctx.respond(embed=response)
+            response = await ctx.respond(embed=response)
+
+            Logging.log_command(ctx, action='Command',
+                                extra="Failed to ban", response=response)
+
+            return
 
         raise error
 
@@ -297,7 +364,12 @@ class General(commands.Cog):
             color=0x00ff00
         )
 
-        return await ctx.respond(embed=response)
+        response = await ctx.respond(embed=response)
+
+        Logging.log_command(ctx, action='Command',
+                            extra=f"Unbanned {user.name}", response=response)
+
+        return
 
     @unban.error
     async def unban_error(self, ctx, error):
@@ -310,7 +382,12 @@ class General(commands.Cog):
                 color=0xff0000
             )
 
-            return await ctx.respond(embed=response)
+            response = await ctx.respond(embed=response)
+
+            Logging.log_command(ctx, action='Command',
+                                extra="Failed to unban", response=response)
+
+            return
 
         if isinstance(error, MissingPermissions):
             response = discord.Embed(
@@ -320,7 +397,12 @@ class General(commands.Cog):
                 color=0xff0000
             )
 
-            return await ctx.respond(embed=response)
+            response = await ctx.respond(embed=response)
+
+            Logging.log_command(ctx, action='Command',
+                                extra="Failed to unban", response=response)
+
+            return
 
         if isinstance(error, Forbidden):
             response = discord.Embed(
@@ -329,7 +411,12 @@ class General(commands.Cog):
                 color=0xff0000
             )
 
-            return await ctx.respond(embed=response)
+            response = await ctx.respond(embed=response)
+
+            Logging.log_command(ctx, action='Command',
+                                extra="Failed to unban", response=response)
+
+            return
 
         raise error
 
