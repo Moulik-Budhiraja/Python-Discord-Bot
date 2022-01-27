@@ -8,6 +8,8 @@ from discord.commands import permission
 from exceptions import *
 from data import Data
 
+from .logging import Logging
+
 data = Data()  # Connect to database
 
 
@@ -85,7 +87,12 @@ class Chat(commands.Cog):
                 color=0x00ff00
             )
 
-            return await ctx.respond(embed=response)
+            response = await ctx.respond(embed=response)
+
+            Logging.log_command(ctx, action='Command',
+                                extra=f"Umuted channels: {channels_muted}", response=response)
+
+            return
 
         # get the channel or add it if it doesn't exist
         try:
@@ -101,7 +108,12 @@ class Chat(commands.Cog):
                 color=0xFFff00
             )
 
-            return await ctx.respond(embed=response)
+            response = await ctx.respond(embed=response)
+
+            Logging.log_command(ctx, action='Command',
+                                extra=f"Failed to unmute channel: {channel.name}", response=response)
+
+            return
 
         # mute the channel
         channel_data.muted_events = True
@@ -113,7 +125,12 @@ class Chat(commands.Cog):
             color=0x00ff00
         )
 
-        return await ctx.respond(embed=response)
+        response = await ctx.respond(embed=response)
+
+        Logging.log_command(ctx, action='Command',
+                            extra=f"Muted channel: {channel.name}", response=response)
+
+        return
 
     @slash_command(guild_ids=data.enabled_slash, name='unmute_channel', description='Allow jerald to talk in this channel')
     async def unmute_channel(
@@ -134,7 +151,7 @@ class Chat(commands.Cog):
 
         if all:
             # unmute all channels
-            channels_muted = []
+            channels_unmuted = []
             for channel in ctx.guild.channels:
                 try:
                     channel_data = guild_data.get_channel(channel.id)
@@ -146,22 +163,27 @@ class Chat(commands.Cog):
                 if channel_data.muted_events:  # if the channel is muted
                     channel_data.muted_events = False
                     # add each channel unmuted to the list
-                    channels_muted.append(channel)
+                    channels_unmuted.append(channel)
 
             # Mention each channel
-            channels_muted = [c.mention for c in channels_muted]
+            channels_unmuted = [c.mention for c in channels_unmuted]
 
             # Joined string
-            channels_muted = '\n'.join(channels_muted)
+            channels_unmuted = '\n'.join(channels_unmuted)
 
             # Send a response
             response = discord.Embed(
                 title="Channels Unmuted",
-                description=f"The following channels have been unmuted:\n{channels_muted}",
+                description=f"The following channels have been unmuted:\n{channels_unmuted}",
                 color=0x00ff00
             )
 
-            return await ctx.respond(embed=response)
+            response = await ctx.respond(embed=response)
+
+            Logging.log_command(ctx, action='Command',
+                                extra=f"Umuted channels: {channels_unmuted}", response=response)
+
+            return
 
         # get the channel or add it if it doesn't exist
         try:
@@ -177,7 +199,12 @@ class Chat(commands.Cog):
                 color=0xffff00
             )
 
-            return await ctx.respond(embed=response)
+            response = await ctx.respond(embed=response)
+
+            Logging.log_command(ctx, action='Command',
+                                extra=f"Failed to unmute channel: {channel.name}", response=response)
+
+            return
 
         # unmute the channel
         channel_data.muted_events = False
@@ -189,7 +216,12 @@ class Chat(commands.Cog):
             color=0x00ff00
         )
 
-        return await ctx.respond(embed=response)
+        response = await ctx.respond(embed=response)
+
+        Logging.log_command(ctx, action='Command',
+                            extra=f"Unmuted channel: {channel.name}", response=response)
+
+        return
 
 
 def setup(client):

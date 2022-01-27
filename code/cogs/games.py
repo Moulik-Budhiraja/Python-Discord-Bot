@@ -1,3 +1,4 @@
+from .logging import Logging
 import discord
 from discord.ext import commands
 from discord.commands import slash_command, Option
@@ -47,7 +48,12 @@ class Games(commands.Cog):
             color=0x00ffff
         )
 
-        return await ctx.respond(embed=response)
+        response = await ctx.respond(embed=response)
+
+        Logging.log_command(ctx, action='Command',
+                            extra=f"PPsize for user: {user.name}", response=response)
+
+        return
 
 
 def setup(client):
