@@ -2,7 +2,7 @@ from urllib import response
 import discord
 from discord.ext import commands
 from discord import ExtensionNotFound, ExtensionAlreadyLoaded, ExtensionNotLoaded
-from discord.commands import Option
+from discord.commands import Option, permissions
 
 import os
 from dotenv import load_dotenv
@@ -165,6 +165,16 @@ async def auto_load(
         )
 
     await ctx.respond(embed=response)
+
+
+@client.slash_command(guild_ids=data.enabled_slash, name='shutdown', default_permission=False)
+@permissions.is_user(int(os.getenv("BOT_OWNER_ID")))
+async def shutdown(ctx):
+    """
+    Shuts down the bot
+    """
+    await ctx.respond('Shutting down...')
+    await client.close()
 
 
 @client.event

@@ -6,6 +6,118 @@ from dotenv import load_dotenv
 from exceptions import EntryNotFound, EntryAlreadyExists
 
 
+class Log:
+    def __init__(self, id, db, cursor):
+        self.id = id
+        self._db = db
+        self._cursor = cursor
+
+    @property
+    def guild(self) -> 'Guild':
+        """Returns guild object where log originated
+
+        Returns:
+            int: [guild object]
+        """
+
+        self._cursor.execute(
+            "SELECT guild_id FROM audit_log WHERE id = %s", (self.id,))
+
+        guild_id = self._cursor.fetchone()[0]
+
+        return Guild(guild_id, self._db, self._cursor)
+
+    @property
+    def channel(self) -> 'Channel':
+        """Returns channel object where log originated
+
+        Returns:
+            int: [channel object]
+        """
+
+        self._cursor.execute(
+            "SELECT channel_id FROM audit_log WHERE id = %s", (self.id,))
+
+        channel_id = self._cursor.fetchone()[0]
+
+        return Channel(channel_id, self._db, self._cursor)
+
+    @property
+    def message_id(self) -> int:
+        """Returns message_id where log originated
+
+        Returns:
+            int: [message_id]
+        """
+
+        self._cursor.execute(
+            "SELECT message_id FROM audit_log WHERE id = %s", (self.id,))
+
+        message_id = self._cursor.fetchone()[0]
+
+        return message_id
+
+    @property
+    def message_text(self) -> str:
+        """Returns message_text where log originated
+
+        Returns:
+            str: [message_text]
+        """
+
+        self._cursor.execute(
+            "SELECT message_text FROM audit_log WHERE id = %s", (self.id,))
+
+        message_text = self._cursor.fetchone()[0]
+
+        return message_text
+
+    @property
+    def user(self) -> 'User':
+        """Returns user object where log originated
+
+        Returns:
+            int: [user object]
+        """
+
+        self._cursor.execute(
+            "SELECT user_id FROM audit_log WHERE id = %s", (self.id,))
+
+        user_id = self._cursor.fetchone()[0]
+
+        return User(user_id, self._db, self._cursor)
+
+    @property
+    def action(self) -> str:
+        """Returns action taken on log
+
+        Returns:
+            str: [action]
+        """
+
+        self._cursor.execute(
+            "SELECT action FROM audit_log WHERE id = %s", (self.id,))
+
+        action = self._cursor.fetchone()[0]
+
+        return action
+
+    @property
+    def extra(self):
+        """Returns extra data on log
+
+        Returns:
+            str: [extra]
+        """
+
+        self._cursor.execute(
+            "SELECT extra FROM audit_log WHERE id = %s", (self.id,))
+
+        extra = self._cursor.fetchone()[0]
+
+        return extra
+
+
 class Cog:
     def __init__(self, id, db, cursor):
         self.id = id
@@ -784,6 +896,22 @@ class User:
 
         self._db.commit()
 
+    @property
+    def logs(self) -> list:
+        """Returns a list of log objects
+
+        Returns:
+            list: [list of Log objects]
+        """
+
+        self._cursor.execute(
+            "SELECT id FROM audit_log WHERE user_id = %s", (self.id,))
+
+        log_ids = self._cursor.fetchall()
+        logs = [Log(id[0], self._db, self._cursor) for id in log_ids]
+
+        return logs
+
     def __hash__(self):
         return hash(self.id)
 
@@ -941,6 +1069,24 @@ class Channel:
                  for game_id in game_ids]
 
         return games
+
+    @property
+    def logs(self) -> list:
+        """Returns a list of logs
+
+        Returns:
+            list: [logs]
+        """
+
+        self._cursor.execute(
+            "SELECT id FROM audit_log WHERE channel_id = %s", (self.id,))
+
+        log_ids = self._cursor.fetchall()
+
+        logs = [Log(id[0], self._db, self._cursor)
+                for id in log_ids]
+
+        return logs
 
     def __hash__(self):
         return hash(self.id)
@@ -1231,6 +1377,22 @@ class Guild:
 
         self._db.commit()
 
+    @property
+    def logs(self) -> list:
+        """Returns a list of log objects
+
+        Returns:
+            list: [list of Log objects]
+        """
+
+        self._cursor.execute(
+            "SELECT id FROM audit_log WHERE guild_id = %s", (self.id,))
+
+        log_ids = self._cursor.fetchall()
+        logs = [Log(id[0], self._db, self._cursor) for id in log_ids]
+
+        return logs
+
     def __hash__(self):
         return hash(self.id)
 
@@ -1374,6 +1536,21 @@ class Data:
 
         return cogs
 
+    @property
+    def logs(self) -> list:
+        """Returns a list of log objects
+
+        Returns:
+            list: [list of log objects]
+        """
+
+        self._cursor.execute("SELECT id FROM audit_log")
+
+        log_ids = self._cursor.fetchall()
+        logs = [Log(id[0], self._db, self._cursor) for id in log_ids]
+
+        return logs
+
     def get_guild(self, discord_id: int) -> Guild:
         """Returns Guild object from database
 
@@ -1418,6 +1595,51 @@ class Data:
         guild = Guild(self._cursor.lastrowid, self._db, self._cursor)
 
         return guild
+
+    def get_channel(self, discord_id: int) -> Channel:
+        """Returns Channel object from database
+
+        Args:
+            discord_id ([int]): [Id discord associates with each channel]
+        """
+
+        self._cursor.execute(
+            "SELECT id FROM channels WHERE discord_id = %s", (discord_id,))
+
+        try:
+            channel_id = self._cursor.fetchone()[0]
+        except TypeError:
+            raise EntryNotFound("Channel does not exist in the database")
+
+        return Channel(channel_id, self._db, self._cursor)
+
+    def add_channel(self, discord_id: int, name: str, **kwargs):
+        """Adds a channel to the database
+
+        Args:
+            discord_id (int): [Id discord associates with each channel]
+            name (str): [Name of the channel]
+        """
+        # Check if channel is already in the database
+        self._cursor.execute(
+            "SELECT * FROM channels WHERE discord_id = %s", (discord_id,))
+
+        if len(self._cursor.fetchall()) != 0:
+            raise EntryAlreadyExists(
+                f"Channel with id {discord_id} already exists in the database")
+
+        # Optional args
+        dynamic_voice_channel = kwargs.get('dynamic_voice_channel', False)
+
+        # Insert new channel
+        self._cursor.execute(
+            "INSERT INTO channels (discord_id, name, dynamic_voice_channel) VALUES (%s, %s, %s)",
+            (discord_id, name, dynamic_voice_channel))
+        self._db.commit()
+
+        channel = Channel(self._cursor.lastrowid, self._db, self._cursor)
+
+        return channel
 
     def get_user(self, discord_id: int) -> User:
         """Returns User object from database
@@ -1480,6 +1702,64 @@ class Data:
             raise EntryNotFound("Cog does not exist in the database")
 
         return Cog(cog_id, self._db, self._cursor)
+
+    def add_log(self, action: str, extra: str = None, ctx=None, **kwargs):
+        """Adds a log to the database
+
+        Args:
+            action (str): [Action that was taken]
+            extra (str): [Extra information]
+            ctx (Context): [Discord Context]
+            **kwargs: Other ways to set information
+        """
+        import datetime
+
+        if ctx:
+            # Provided context
+            try:
+                user_id = self.get_user(ctx.author.id).id
+            except EntryNotFound:
+                user_id = self.add_user(
+                    ctx.author.id, ctx.author.name, ctx.author.discriminator).id
+
+            try:
+                guild_id = self.get_guild(ctx.guild.id).id
+            except EntryNotFound:
+                guild_id = self.add_guild(ctx.guild.id, ctx.guild.name).id
+
+            try:
+                channel_id = self.get_channel(ctx.channel.id).id
+            except EntryNotFound:
+                channel_id = self.add_channel(
+                    ctx.channel.id, ctx.channel.name).id
+
+            try:
+                message_id = ctx.message.id
+                message_text = ctx.message.content
+
+            except AttributeError:  # if ctx is a message object
+                message_id = ctx.id
+                message_text = ctx.content
+
+        else:
+            # Provied as kwargs
+            user_id = self.get_user(kwargs.get('user_id')).id if kwargs.get(
+                'user_id') else None
+            guild_id = self.get_guild(kwargs.get('guild_id')).id if kwargs.get(
+                'guild_id') else None
+            channel_id = self.get_channel(kwargs.get('channel_id')).id if kwargs.get(
+                'channel_id') else None
+            message_id = kwargs.get('message_id')
+            message_text = kwargs.get('message_text')
+
+        time = datetime.datetime.now()
+
+        # Insert new log
+        self._cursor.execute(
+            """INSERT INTO audit_log (action, extra, user_id, guild_id, channel_id, message_id, message_text, time)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+            (action, extra, user_id, guild_id, channel_id, message_id, message_text, time))
+        self._db.commit()
 
 
 if __name__ == "__main__":

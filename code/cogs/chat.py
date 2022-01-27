@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord.ext.commands import MissingRequiredArgument, MissingPermissions
 from discord import Forbidden
 from discord.commands import slash_command, Option
+from discord.commands import permission
 
 from exceptions import *
 from data import Data
@@ -40,7 +41,7 @@ class Chat(commands.Cog):
             await message.channel.send(
                 f"{message.author.mention} keep your voice down!")
 
-    @slash_command(guild_ids=data.enabled_slash, name='mute_channel', description='Stop jerald from talking in this channel')
+    @slash_command(guild_ids=data.enabled_slash, name='mute_channel', description='Stop jerald from talking in the specified channel')
     async def mute_channel(
         self,
         ctx,
@@ -49,7 +50,7 @@ class Chat(commands.Cog):
         all: Option(bool, "Mute all channels", required=False, default=False)
     ):
         """
-        Mute the channel
+        Stops Jerald from talking in the specified channel.
         """
         # get the channel
         channel = ctx.channel if channel is None else channel
