@@ -14,6 +14,15 @@ class Logging(commands.Cog):
     async def on_message(self, message):
         data.add_log("Message", ctx=message)
 
+    @commands.Cog.listener()
+    async def on_message_edit(self, before, after):
+        data.add_log("Message Edit",
+                     extra=f"Before: {before.content}", ctx=after)
+
+    @commands.Cog.listener()
+    async def on_message_delete(self, message):
+        data.add_log("Message Delete", ctx=message)
+
     @staticmethod
     async def log_command(ctx, action=None, response=None, extra=None):
         # Log command

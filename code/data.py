@@ -934,6 +934,41 @@ class User:
 
         return Embed(embed_id, self._db, self._cursor)
 
+    def get_logs(self, limit: int = 100, guild=None, channel=None, action=None) -> list:
+        """Returns a list of log objects
+
+        Args:
+            limit (int, optional): [The limit of logs to return]. Defaults to 100.
+            guild (int, optional): [The guild_id to filter by]. Defaults to None.
+            channel (int, optional): [The channel_id to filter by]. Defaults to None.
+            action (str, optional): [The action to filter by]. Defaults to None.
+        """
+
+        query = "SELECT id FROM audit_log WHERE user_id = %s"
+        paramaters = (self.id,)
+
+        if guild:
+            query = query + " AND guild_id = %s"
+            paramaters = paramaters + (guild,)
+
+        if channel:
+            query = query + " AND channel_id = %s"
+            paramaters = paramaters + (channel,)
+
+        if action:
+            query = query + " AND action = %s"
+            paramaters = paramaters + (action,)
+
+        query = query + "LIMIT %s"
+        paramaters = paramaters + (limit,)
+
+        self._cursor.execute(query, paramaters)
+
+        log_ids = self._cursor.fetchall()
+        logs = [Log(id[0], self._db, self._cursor) for id in log_ids]
+
+        return logs
+
 
 class Channel:
     def __init__(self, id, db, cursor):
@@ -1741,17 +1776,40 @@ class Data:
                 message_id = ctx.id
                 message_text = ctx.content
 
-        else:
-            # Provied as kwargs
+        # Overwrite information if provided as kwargs
+        try:
+            # If entry not in database, add it
             user_id = self.get_user(kwargs.get('user_id')).id if kwargs.get(
-                'user_id') else None
-            guild_id = self.get_guild(kwargs.get('guild_id')).id if kwargs.get(
-                'guild_id') else None
-            channel_id = self.get_channel(kwargs.get('channel_id')).id if kwargs.get(
-                'channel_id') else None
-            message_id = kwargs.get('message_id')
-            message_text = kwargs.get('message_text')
+                'user_id') else user_id
+        except EntryNotFound:
+            discord_user = ctx.guild.get_member(kwargs.get('user_id'))
+            user_id = self.add_user(
+                discord_user.id, discord_user.name, discord_user.discriminator).id
 
+        try:
+            # If entry not in database, add it
+            guild_id = self.get_guild(kwargs.get('guild_id')).id if kwargs.get(
+                'guild_id') else guild_id
+        except EntryNotFound:
+            discord_guild = ctx.guild.get_guild(kwargs.get('guild_id'))
+            guild_id = self.add_guild(
+                discord_guild.id, discord_guild.name).id
+
+        try:
+            # If entry not in database, add it
+            channel_id = self.get_channel(kwargs.get('channel_id')).id if kwargs.get(
+                'channel_id') else channel_id
+        except EntryNotFound:
+            discord_channel = ctx.guild.get_channel(kwargs.get('channel_id'))
+            channel_id = self.add_channel(
+                discord_channel.id, discord_channel.name).id
+
+        message_id = kwargs.get('message_id') if kwargs.get(
+            'message_id') else message_id
+        message_text = kwargs.get('message_text') if kwargs.get(
+            'message_text') else message_text
+
+        # Log time
         time = datetime.datetime.now()
 
         # Insert new log

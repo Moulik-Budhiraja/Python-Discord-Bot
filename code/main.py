@@ -24,6 +24,7 @@ client = commands.Bot(
 
 
 @client.slash_command(guild_ids=data.enabled_slash, name='load')
+@permissions.is_user(int(os.getenv("BOT_OWNER_ID")))
 async def load(
     ctx,
     name: Option(str, "The name of the extension", required=True, default=None)
@@ -129,6 +130,7 @@ async def load(
 
 
 @client.slash_command(guild_ids=data.enabled_slash, name='auto-load')
+@permissions.is_user(int(os.getenv("BOT_OWNER_ID")))
 async def auto_load(
     ctx,
     name: Option(str, "The name of the extension", required=True, default=None),
