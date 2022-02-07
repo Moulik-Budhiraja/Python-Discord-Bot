@@ -50,8 +50,8 @@ class Games(commands.Cog):
 
         response = await ctx.respond(embed=response)
 
-        Logging.log_command(ctx, action='Command',
-                            extra=f"PPsize for user: {user.name}", response=response)
+        await Logging.log_command(ctx, action='Command',
+                                  extra=f"PPsize for user: {user.name}")
 
         return
 

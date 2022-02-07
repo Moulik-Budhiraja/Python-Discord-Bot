@@ -10,6 +10,8 @@ from dotenv import load_dotenv
 from exceptions import *
 from data import Data
 
+from cogs.logging import Logging
+
 
 data = Data()  # Connect to database
 
@@ -42,7 +44,12 @@ async def load(
             color=0x00ff00
         )
 
-        await ctx.respond(embed=response)
+        response = await ctx.respond(embed=response)
+
+        await Logging.log_command(ctx, action='Command',
+                                  extra=f"{ctx.author.name} loaded {name}")
+
+        return
 
     except ExtensionNotFound:
         response = discord.Embed(
@@ -51,7 +58,12 @@ async def load(
             color=0xff0000
         )
 
-        await ctx.respond(embed=response)
+        response = await ctx.respond(embed=response)
+
+        await Logging.log_command(ctx, action='Command',
+                                  extra=f"{ctx.author.name} failed to load {name}")
+
+        return
 
     except ExtensionAlreadyLoaded:
         response = discord.Embed(
@@ -60,7 +72,12 @@ async def load(
             color=0xff0000
         )
 
-        await ctx.respond(embed=response)
+        response = await ctx.respond(embed=response)
+
+        await Logging.log_command(ctx, action='Command',
+                                  extra=f"{ctx.author.name} failed to load {name}")
+
+        return
 
 ''' # Unload and Reload Commands
     # # UNLOADS COG
@@ -150,7 +167,12 @@ async def auto_load(
             color=0xff0000
         )
 
-        return await ctx.respond(embed=response)
+        response = await ctx.respond(embed=response)
+
+        await Logging.log_command(ctx, action='Command',
+                                  extra=f"{ctx.author.name} failed to set {name} to autoload")
+
+        return
 
     # Send a response based on the action
     if enabled:
@@ -159,6 +181,13 @@ async def auto_load(
             description=f'`{name}` will now automatically load',
             color=0x00ff00
         )
+
+        response = await ctx.respond(embed=response)
+
+        await Logging.log_command(ctx, action='Command',
+                                  extra=f"{ctx.author.name} set {name} to autoload")
+
+        return
     else:
         response = discord.Embed(
             title='Auto-Load',
@@ -166,7 +195,12 @@ async def auto_load(
             color=0x00ff00
         )
 
-    await ctx.respond(embed=response)
+        response = await ctx.respond(embed=response)
+
+        await Logging.log_command(ctx, action='Command',
+                                  extra=f"{ctx.author.name} set {name} to no longer autoload")
+
+        return
 
 
 @client.slash_command(guild_ids=data.enabled_slash, name='shutdown', default_permission=False)
@@ -175,7 +209,11 @@ async def shutdown(ctx):
     """
     Shuts down the bot
     """
-    await ctx.respond('Shutting down...')
+    response = await ctx.respond("Shutting down...")
+
+    await Logging.log_command(ctx, action='Command',
+                              extra=f"User shutdown bot: {ctx.author.name}")
+
     await client.close()
 
 

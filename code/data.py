@@ -5,6 +5,169 @@ from dotenv import load_dotenv
 
 from exceptions import EntryNotFound, EntryAlreadyExists
 
+import datetime
+
+
+class CustomConfig:
+    def __init__(self, id, db, cursor):
+        self.id = id
+        self._db = db
+        self._cursor = cursor
+
+    @property
+    def type(self) -> str:
+        """Returns type of config
+
+        Returns:
+            str: [Type of config]"""
+
+        self._cursor.execute(
+            "SELECT type FROM auto_mod_custom_config WHERE id = %s", (self.id,))
+
+        return self._cursor.fetchone()[0]
+
+    @property
+    def value(self) -> str:
+        """Returns value of config
+
+        Returns:
+            str: [Value of config]"""
+
+        self._cursor.execute(
+            "SELECT value FROM auto_mod_custom_config WHERE id = %s", (self.id,))
+
+        return self._cursor.fetchone()[0]
+
+    @property
+    def consequence(self) -> str:
+        """Returns consequence of config
+
+        Returns:
+            str: [Consequence of config]"""
+
+        self._cursor.execute(
+            "SELECT consequence FROM auto_mod_custom_config WHERE id = %s", (self.id,))
+
+        return self._cursor.fetchone()[0]
+
+    @property
+    def timeout_time(self) -> int:
+        """Returns timeout time of config in minutes
+
+        Returns:
+            int: [Timeout time of config]"""
+
+        self._cursor.execute(
+            "SELECT timeout_time FROM auto_mod_custom_config WHERE id = %s", (self.id,))
+
+        return self._cursor.fetchone()[0]
+
+
+class AutoMod:
+    def __init__(self, id, db, cursor):
+        self.id = id
+        self._db = db
+        self._cursor = cursor
+
+    @property
+    def guild(self) -> 'Guild':
+        """Returns guild object for this config
+
+        Returns:
+            Guild: [Guild object]
+        """
+
+        self._cursor.execute(
+            "SELECT guild_id FROM auto_mod_config WHERE id = %s", (self.id,))
+
+        guild_id = self._cursor.fetchone()[0]
+
+        return Guild(guild_id, self._db, self._cursor)
+
+    @property
+    def enabled(self) -> bool:
+        """Returns if AutoMod is enabled for this config
+
+        Returns:
+            bool: [If AutoMod is enabled]
+        """
+
+        self._cursor.execute(
+            "SELECT enabled FROM auto_mod_config WHERE id = %s", (self.id,))
+
+        return self._cursor.fetchone()[0]
+
+    @enabled.setter
+    def enabled(self, enabled: bool):
+        """Sets if AutoMod is enabled for this config
+
+        Args:
+            enabled (bool): [If AutoMod is enabled]
+        """
+
+        self._cursor.execute(
+            "UPDATE auto_mod_config SET enabled = %s WHERE id = %s", (enabled, self.id))
+        self._db.commit()
+
+    @property
+    def anti_spam(self) -> int:
+        """Returns anti_spam threshold for this config
+
+        Returns:
+            int: [0 if disabled, not 0 if enabled]
+        """
+
+        self._cursor.execute(
+            "SELECT anti_spam FROM auto_mod_config WHERE id = %s", (self.id,))
+
+        anti_spam = self._cursor.fetchone()[0]
+
+        return anti_spam
+
+    @anti_spam.setter
+    def anti_spam(self, value: int):
+        """Sets anti-spam threshold for this config
+
+        Args:
+            value (int): [0 if disabled, not 0 if enabled]
+        """
+
+        self._cursor.execute(
+            "UPDATE auto_mod_config SET anti_spam = %s WHERE id = %s", (value, self.id))
+        self._db.commit()
+
+    @property
+    def custom_config(self) -> list:
+        """Returns custom config
+
+        Returns:
+            list: [list of custom config]
+        """
+
+        self._cursor.execute(
+            "SELECT id FROM auto_mod_custom_config WHERE config_id = %s", (self.id,))
+
+        custom_config_ids = self._cursor.fetchall()
+
+        return [CustomConfig(id[0], self._db, self._cursor) for id in custom_config_ids]
+
+    def add_config(self, type: str, value: str, consequence: str, timeout_time: int = 10):
+        """Adds custom config to this config
+
+        Args:
+            type (str): [Type of config]
+            value (str): [Value of config]
+            consequence (str): [Consequence of config]
+            timeout_time (int, optional): [Timeout time of config in minutes. Defaults to 10.]
+        """
+
+        self._cursor.execute(
+            "INSERT INTO auto_mod_custom_config (config_id, type, value, consequence, timeout_time) VALUES (%s, %s, %s, %s, %s)",
+            (self.id, type, value, consequence, timeout_time))
+        self._db.commit()
+
+        return CustomConfig(self._cursor.lastrowid, self._db, self._cursor)
+
 
 class Log:
     def __init__(self, id, db, cursor):
@@ -17,7 +180,7 @@ class Log:
         """Returns guild object where log originated
 
         Returns:
-            int: [guild object]
+            Guild: [guild object]
         """
 
         self._cursor.execute(
@@ -116,6 +279,9 @@ class Log:
         extra = self._cursor.fetchone()[0]
 
         return extra
+
+    def __repr__(self):
+        return f"<Log id={self.id} action={self.action} message_text={self.message_text} guild={self.guild} channel={self.channel} user={self.user}>"
 
 
 class Cog:
@@ -912,6 +1078,9 @@ class User:
 
         return logs
 
+    def __repr__(self):
+        return f"<User {self.id}, {self.name}{self.discriminator}>"
+
     def __hash__(self):
         return hash(self.id)
 
@@ -934,7 +1103,7 @@ class User:
 
         return Embed(embed_id, self._db, self._cursor)
 
-    def get_logs(self, limit: int = 100, guild=None, channel=None, action=None) -> list:
+    def get_logs(self, limit: int = 100, time: datetime.datetime = None, guild=None, channel=None, action=None) -> list:
         """Returns a list of log objects
 
         Args:
@@ -959,8 +1128,17 @@ class User:
             query = query + " AND action = %s"
             paramaters = paramaters + (action,)
 
-        query = query + "LIMIT %s"
-        paramaters = paramaters + (limit,)
+        if time:
+            query = query + " AND time > %s"
+            paramaters = paramaters + (time,)
+
+        query = query + " ORDER BY time DESC"
+
+        if limit:
+            query = query + " LIMIT %s"
+            paramaters = paramaters + (limit,)
+
+        paramaters = paramaters
 
         self._cursor.execute(query, paramaters)
 
@@ -1428,6 +1606,21 @@ class Guild:
 
         return logs
 
+    @property
+    def auto_mod(self) -> bool:
+        """Returns AutoMod object
+
+        Returns:
+            AutoMod: [AutoMod object]
+        """
+
+        self._cursor.execute(
+            "SELECT id FROM auto_mod_config WHERE guild_id = %s", (self.id,))
+
+        auto_mod_id = self._cursor.fetchone()[0]
+
+        return AutoMod(auto_mod_id, self._db, self._cursor)
+
     def __hash__(self):
         return hash(self.id)
 
@@ -1505,7 +1698,7 @@ class Data:
             database=os.getenv("DB_NAME"),
         )
 
-        self._cursor = self._db.cursor()
+        self._cursor = self._db.cursor(buffered=True)
 
     @property
     def guild_discord_ids(self) -> list:
@@ -1612,6 +1805,9 @@ class Data:
         Args:
             discord_id (int): [Id discord associates with each guild]
             name (str): [Name of the guild]
+
+        Returns:
+            Guild: [Guild object]
         """
         # Check if guild is already in the database
         self._cursor.execute(
@@ -1625,9 +1821,13 @@ class Data:
         self._cursor.execute(
             "INSERT INTO guilds (discord_id, name) VALUES (%s, %s)",
             (discord_id, name))
-        self._db.commit()
 
         guild = Guild(self._cursor.lastrowid, self._db, self._cursor)
+
+        self._cursor.execute(
+            "INSERT INTO auto_mod_config (guild_id) VALUES (%s)", (guild.id,))
+
+        self._db.commit()
 
         return guild
 
@@ -1738,7 +1938,7 @@ class Data:
 
         return Cog(cog_id, self._db, self._cursor)
 
-    def add_log(self, action: str, extra: str = None, ctx=None, **kwargs):
+    def add_log(self, action: str, extra: str = None, **kwargs):
         """Adds a log to the database
 
         Args:
@@ -1749,74 +1949,20 @@ class Data:
         """
         import datetime
 
-        if ctx:
-            # Provided context
-            try:
-                user_id = self.get_user(ctx.author.id).id
-            except EntryNotFound:
-                user_id = self.add_user(
-                    ctx.author.id, ctx.author.name, ctx.author.discriminator).id
+        # Optional args
+        user_id = kwargs.get('user_id', None)
+        guild_id = kwargs.get('guild_id', None)
+        channel_id = kwargs.get('channel_id', None)
+        message_id = kwargs.get('message_id', None)
+        message_text = kwargs.get('message_text', None)
 
-            try:
-                guild_id = self.get_guild(ctx.guild.id).id
-            except EntryNotFound:
-                guild_id = self.add_guild(ctx.guild.id, ctx.guild.name).id
-
-            try:
-                channel_id = self.get_channel(ctx.channel.id).id
-            except EntryNotFound:
-                channel_id = self.add_channel(
-                    ctx.channel.id, ctx.channel.name).id
-
-            try:
-                message_id = ctx.message.id
-                message_text = ctx.message.content
-
-            except AttributeError:  # if ctx is a message object
-                message_id = ctx.id
-                message_text = ctx.content
-
-        # Overwrite information if provided as kwargs
-        try:
-            # If entry not in database, add it
-            user_id = self.get_user(kwargs.get('user_id')).id if kwargs.get(
-                'user_id') else user_id
-        except EntryNotFound:
-            discord_user = ctx.guild.get_member(kwargs.get('user_id'))
-            user_id = self.add_user(
-                discord_user.id, discord_user.name, discord_user.discriminator).id
-
-        try:
-            # If entry not in database, add it
-            guild_id = self.get_guild(kwargs.get('guild_id')).id if kwargs.get(
-                'guild_id') else guild_id
-        except EntryNotFound:
-            discord_guild = ctx.guild.get_guild(kwargs.get('guild_id'))
-            guild_id = self.add_guild(
-                discord_guild.id, discord_guild.name).id
-
-        try:
-            # If entry not in database, add it
-            channel_id = self.get_channel(kwargs.get('channel_id')).id if kwargs.get(
-                'channel_id') else channel_id
-        except EntryNotFound:
-            discord_channel = ctx.guild.get_channel(kwargs.get('channel_id'))
-            channel_id = self.add_channel(
-                discord_channel.id, discord_channel.name).id
-
-        message_id = kwargs.get('message_id') if kwargs.get(
-            'message_id') else message_id
-        message_text = kwargs.get('message_text') if kwargs.get(
-            'message_text') else message_text
-
-        # Log time
+        # Get current time
         time = datetime.datetime.now()
 
         # Insert new log
         self._cursor.execute(
-            """INSERT INTO audit_log (action, extra, user_id, guild_id, channel_id, message_id, message_text, time)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
-            (action, extra, user_id, guild_id, channel_id, message_id, message_text, time))
+            "INSERT INTO audit_log (time, action, extra, user_id, guild_id, channel_id, message_id, message_text) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+            (time, action, extra, user_id, guild_id, channel_id, message_id, message_text))
         self._db.commit()
 
 

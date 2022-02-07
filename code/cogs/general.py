@@ -21,8 +21,8 @@ class General(commands.Cog):
         """
         response = await ctx.respond(f'Pong! `{round(self.client.latency * 1000)}ms`')
 
-        Logging.log_command(ctx, action='Command',
-                            extra="ping", response=response)
+        await Logging.log_command(ctx, action='Command',
+                                  extra="ping")
 
         return
 
@@ -51,8 +51,8 @@ class General(commands.Cog):
 
             response = await ctx.respond(embed=response)  # Send the response
 
-            Logging.log_command(ctx, action='Command',
-                                extra=f"Failed to mute {user.name}", response=response)
+            await Logging.log_command(ctx, action='Command',
+                                      extra=f"Failed to mute {user.name}")
 
             return
 
@@ -67,8 +67,8 @@ class General(commands.Cog):
 
         response = await ctx.respond(embed=response)  # Send the response
 
-        Logging.log_command(ctx, action='Command',
-                            extra=f"Muted {user.name}", response=response)
+        await Logging.log_command(ctx, action='Command',
+                                  extra=f"Muted {user.name}")
 
         return
 
@@ -86,8 +86,8 @@ class General(commands.Cog):
 
             response = await ctx.respond(embed=response)  # Send the response
 
-            Logging.log_command(ctx, action='Command',
-                                extra="Failed to mute", response=response)
+            await Logging.log_command(ctx, action='Command',
+                                      extra="Failed to mute")
 
             return
 
@@ -102,8 +102,8 @@ class General(commands.Cog):
 
             response = await ctx.respond(embed=response)  # Send the response
 
-            Logging.log_command(ctx, action='Command',
-                                extra="Failed to mute", response=response)
+            await Logging.log_command(ctx, action='Command',
+                                      extra="Failed to mute")
 
             return
 
@@ -116,8 +116,8 @@ class General(commands.Cog):
 
             response = await ctx.respond(embed=response)
 
-            Logging.log_command(ctx, action='Command',
-                                extra="Failed to mute", response=response)
+            await Logging.log_command(ctx, action='Command',
+                                      extra="Failed to mute")
 
             return
 
@@ -170,8 +170,8 @@ class General(commands.Cog):
 
             response = await ctx.respond(embed=response)
 
-            Logging.log_command(ctx, action='Command',
-                                extra="Failed to unmute", response=response)
+            await Logging.log_command(ctx, action='Command',
+                                      extra="Failed to unmute")
 
             return
 
@@ -186,8 +186,8 @@ class General(commands.Cog):
 
             response = await ctx.respond(embed=response)
 
-            Logging.log_command(ctx, action='Command',
-                                extra="Failed to unmute", response=response)
+            await Logging.log_command(ctx, action='Command',
+                                      extra="Failed to unmute")
 
             return
 
@@ -200,8 +200,8 @@ class General(commands.Cog):
 
             response = await ctx.respond(embed=response)
 
-            Logging.log_command(ctx, action='Command',
-                                extra="Failed to unmute", response=response)
+            await Logging.log_command(ctx, action='Command',
+                                      extra="Failed to unmute")
 
             return
 
@@ -289,8 +289,8 @@ class General(commands.Cog):
 
         response = await ctx.respond(embed=response)
 
-        Logging.log_command(ctx, action='Command',
-                            extra=f"Banned {user.name}", response=response)
+        await Logging.log_command(ctx, action='Command',
+                                  extra=f"Banned {user.name}")
 
         return
 
@@ -307,8 +307,8 @@ class General(commands.Cog):
 
             response = await ctx.respond(embed=response)
 
-            Logging.log_command(ctx, action='Command',
-                                extra="Failed to ban", response=response)
+            await Logging.log_command(ctx, action='Command',
+                                      extra="Failed to ban")
 
             return
 
@@ -322,8 +322,8 @@ class General(commands.Cog):
 
             response = await ctx.respond(embed=response)
 
-            Logging.log_command(ctx, action='Command',
-                                extra="Failed to ban", response=response)
+            await Logging.log_command(ctx, action='Command',
+                                      extra="Failed to ban")
 
             return
 
@@ -336,8 +336,8 @@ class General(commands.Cog):
 
             response = await ctx.respond(embed=response)
 
-            Logging.log_command(ctx, action='Command',
-                                extra="Failed to ban", response=response)
+            await Logging.log_command(ctx, action='Command',
+                                      extra="Failed to ban")
 
             return
 
@@ -366,8 +366,8 @@ class General(commands.Cog):
 
         response = await ctx.respond(embed=response)
 
-        Logging.log_command(ctx, action='Command',
-                            extra=f"Unbanned {user.name}", response=response)
+        await Logging.log_command(ctx, action='Command',
+                                  extra=f"Unbanned {user.name}")
 
         return
 
@@ -384,8 +384,8 @@ class General(commands.Cog):
 
             response = await ctx.respond(embed=response)
 
-            Logging.log_command(ctx, action='Command',
-                                extra="Failed to unban", response=response)
+            await Logging.log_command(ctx, action='Command',
+                                      extra="Failed to unban")
 
             return
 
@@ -399,8 +399,8 @@ class General(commands.Cog):
 
             response = await ctx.respond(embed=response)
 
-            Logging.log_command(ctx, action='Command',
-                                extra="Failed to unban", response=response)
+            await Logging.log_command(ctx, action='Command',
+                                      extra="Failed to unban")
 
             return
 
@@ -413,8 +413,8 @@ class General(commands.Cog):
 
             response = await ctx.respond(embed=response)
 
-            Logging.log_command(ctx, action='Command',
-                                extra="Failed to unban", response=response)
+            await Logging.log_command(ctx, action='Command',
+                                      extra="Failed to unban")
 
             return
 

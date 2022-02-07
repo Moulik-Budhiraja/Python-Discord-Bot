@@ -9,7 +9,6 @@ from exceptions import *
 from data import Data
 
 from .logging import Logging
-
 data = Data()  # Connect to database
 
 
@@ -89,8 +88,8 @@ class Chat(commands.Cog):
 
             response = await ctx.respond(embed=response)
 
-            Logging.log_command(ctx, action='Command',
-                                extra=f"Umuted channels: {channels_muted}", response=response)
+            await Logging.log_command(ctx, action='Command',
+                                      extra=f"Umuted channels: {channels_muted}")
 
             return
 
@@ -110,8 +109,8 @@ class Chat(commands.Cog):
 
             response = await ctx.respond(embed=response)
 
-            Logging.log_command(ctx, action='Command',
-                                extra=f"Failed to unmute channel: {channel.name}", response=response)
+            await Logging.log_command(ctx, action='Command',
+                                      extra=f"Failed to unmute channel: {channel.name}")
 
             return
 
@@ -127,8 +126,8 @@ class Chat(commands.Cog):
 
         response = await ctx.respond(embed=response)
 
-        Logging.log_command(ctx, action='Command',
-                            extra=f"Muted channel: {channel.name}", response=response)
+        await Logging.log_command(ctx, action='Command',
+                                  extra=f"Muted channel: {channel.name}")
 
         return
 
@@ -180,8 +179,8 @@ class Chat(commands.Cog):
 
             response = await ctx.respond(embed=response)
 
-            Logging.log_command(ctx, action='Command',
-                                extra=f"Umuted channels: {channels_unmuted}", response=response)
+            await Logging.log_command(ctx, action='Command',
+                                      extra=f"Umuted channels: {channels_unmuted}")
 
             return
 
@@ -201,8 +200,8 @@ class Chat(commands.Cog):
 
             response = await ctx.respond(embed=response)
 
-            Logging.log_command(ctx, action='Command',
-                                extra=f"Failed to unmute channel: {channel.name}", response=response)
+            await Logging.log_command(ctx, action='Command',
+                                      extra=f"Failed to unmute channel: {channel.name}")
 
             return
 
@@ -218,8 +217,8 @@ class Chat(commands.Cog):
 
         response = await ctx.respond(embed=response)
 
-        Logging.log_command(ctx, action='Command',
-                            extra=f"Unmuted channel: {channel.name}", response=response)
+        await Logging.log_command(ctx, action='Command',
+                                  extra=f"Unmuted channel: {channel.name}")
 
         return
 
